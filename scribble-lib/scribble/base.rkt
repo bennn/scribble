@@ -5,6 +5,7 @@
          "manual-struct.rkt"
          "decode-struct.rkt"
          "html-properties.rkt"
+         "private/doc-source-resolver.rkt"
          "tag.rkt"
          "private/tag.rkt"
          scheme/list
@@ -111,6 +112,7 @@
 (provide/contract 
  [author (->* (content?) () #:rest (listof content?) block?)]
  [author+email (->* (content? string?) (#:obfuscate? any/c) element?)])
+(provide view-source)
 
 (define (author . auths)
   (make-paragraph 
@@ -135,6 +137,18 @@
                                       " dot ")
                      (hyperlink (string-append "mailto:" email) email))
                  ">")))
+
+(define-syntax (view-source stx)
+  ;; TODO what if src not a path string?
+  (with-syntax ([src (path->string (syntax-source stx))]
+                [resolver-stx
+                 (syntax-case stx ()
+                  [(_ doc-source-resolver)
+                   #'doc-source-resover]
+                  [(_)
+                   #'doc-source-resolver/catalogs])])
+    #'(make-paragraph (make-style 'doc-source '())
+        (hyperlink (resolver-stx 'src) "View Source"))))
 
 ;; ----------------------------------------
 
