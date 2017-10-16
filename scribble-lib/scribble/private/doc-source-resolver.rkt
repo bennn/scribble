@@ -20,13 +20,10 @@
 
 (define (doc-source-resolver/catalogs path-str)
   (define-values [pkg-name subpath] (path->pkg+subpath path-str))
-  ;; TODO hard to get right path, try 'with-cache' vs. 'redex'
-  (define subpath-str (path->string (build-path pkg-name subpath)))
   (let* ([catalog-url (get-pkg-source-from-catalogs pkg-name)]
          ;; TODO what if catalog-url is #false
          [catalog-url (url-update-scheme catalog-url "https")]
-         [catalog-url (url-update-query catalog-url `((path . ,subpath-str)))])
-(printf "url ~a~n" (url->string catalog-url))
+         [catalog-url (url-extend-query-path catalog-url subpath)])
     (url->string catalog-url)))
 
 (define (get-pkg-source-from-catalogs pkg-name)
@@ -45,7 +42,16 @@
     (url-query u)
     (url-fragment u)))
 
-(define (url-update-query u new-query)
+(define (url-extend-query-path u subpath)
+  (define old-query (url-query u))
+  (define old-path (assoc 'path old-query))
+  (define new-query
+    (if old-path
+      (for/list ([q (in-list old-query)])
+        (if (eq? 'path (car q))
+          `(path . ,(path->string (build-path (or (cdr old-path) ".") subpath)))
+          q))
+      (cons `(path . ,(path->string subpath)) old-query)))
   (make-url
     (url-scheme u)
     (url-user u)
