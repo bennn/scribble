@@ -13,7 +13,8 @@
   (only-in pkg/path
     path->pkg+subpath)
   (only-in pkg/lib
-    get-pkg-details-from-catalogs)
+    get-pkg-details-from-catalogs
+    current-pkg-catalogs)
   net/url)
 
 ;; -----------------------------------------------------------------------------
@@ -26,10 +27,14 @@
          [catalog-url (url-extend-query-path catalog-url subpath)])
     (url->string catalog-url)))
 
-(define (get-pkg-source-from-catalogs pkg-name)
-  (define details (get-pkg-details-from-catalogs pkg-name))
-  (define source (hash-ref details 'source #f))
-  (and source (string->url source)))
+(define get-pkg-source-from-catalogs
+  (let ([url* (list (string->url "https://pkgs.racket-lang.org") (string->url "https://planet-compats.racket-lang.org"))])
+    (λ (pkg-name)
+      (define details
+        (parameterize ([current-pkg-catalogs url*])
+          (get-pkg-details-from-catalogs pkg-name)))
+      (define source (hash-ref details 'source #f))
+      (and source (string->url source)))))
 
 (define (url-update-scheme u new-scheme)
   (make-url
